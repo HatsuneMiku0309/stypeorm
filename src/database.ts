@@ -66,7 +66,7 @@ class MysqlDatabase implements IDatabase {
     
     private async _init(): Promise<mysql.Connection> {
         try {
-            this._db = <mysql.Connection> (await PlatformTools.load(this._type)).createConnection(this._config);
+            this._db = await (<typeof mysql>await PlatformTools.load(this._type)).createConnection(this._config);
 
             return this._db;
         } catch (err) {
@@ -138,9 +138,9 @@ class OracleDatabase implements IDatabase {
     
     private async _init(): Promise<oracledb.Connection> {
         try {
-            let database = <any> await PlatformTools.load(this._type);
+            let database = <typeof oracledb> await PlatformTools.load(this._type);
             database.outFormat = this._outFormat;
-            this._db = <oracledb.Connection> (database).getConnection(this._config);
+            this._db = await (database).getConnection(this._config);
 
             return this._db;
         } catch (err) {
