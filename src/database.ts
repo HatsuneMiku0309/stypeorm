@@ -3,15 +3,38 @@ import * as mysql from 'mysql2/promise';
 import { PlatformTools } from './platform';
 
 type TDatabaseType = 'oracle' | 'mysql';
-type TConnectionDb = oracledb.Connection | mysql.Connection;
 
-interface IDbConfig extends oracledb.ConnectionAttributes, mysql.ConnectionOptions {
-    
+interface IMysqlConnectionOptions {
+    user?: string,
+    password?: string;
+    database?: string;
+    charset?: string;
+    host?: string;
+    port?: number;
+    timezone?: string | 'local';
+    connectTimeout?: number;
+    typeCast?: boolean | ((field: any, next: () => void) => any);
+    queryFormat?: (query: string, values: any) => void;
+    dateStrings?: boolean | Array<'TIMESTAMP' | 'DATETIME' | 'DATE'>;
+    debug?: any;
+    trace?: boolean;
+    rowsAsArray?: boolean
+}
+
+interface IOracleConnectionOptions {
+    connectString?: string;
+    connectionString?: string;
+    password?: string;
+    user?: string;
+}
+
+interface IDbConfig extends IMysqlConnectionOptions, IOracleConnectionOptions {
+
 };
 
 interface IDatabase {
     type: TDatabaseType,
-    getDb(): Promise<TConnectionDb>,
+    getDb<T = any>(): Promise<T>,
     query(sql: string, values: any, options: { [params: string]: any }): Promise<{ rows: any[] }>,
     end(): Promise<number>
 };
@@ -19,8 +42,8 @@ interface IDatabase {
 class MysqlDatabase implements IDatabase {
     private _type: 'mysql' = 'mysql';
     private _db?: mysql.Connection;
-    private _config: mysql.ConnectionOptions;
-    constructor(config: mysql.ConnectionOptions) {
+    private _config: IMysqlConnectionOptions;
+    constructor(config: IMysqlConnectionOptions) {
         this._config = config;
     }
 
@@ -28,14 +51,14 @@ class MysqlDatabase implements IDatabase {
         return this._type;
     }
 
-    async getDb(): Promise<mysql.Connection> {
+    async getDb<T = any>(): Promise<T> {
         try {
             if (this._db) {
-                return this._db;
+                return <any> this._db;
             }
             let db = await this._init();
 
-            return db;
+            return <any> db;
         } catch (err) {
             throw err;
         }
@@ -82,7 +105,7 @@ class MysqlDatabase implements IDatabase {
 class OracleDatabase implements IDatabase {
     private _type: 'oracle' = 'oracle';
     private _db?: oracledb.Connection;
-    private _config: oracledb.ConnectionAttributes;
+    private _config: IOracleConnectionOptions;
     private _outFormat: number;
     /**
      * outFormat:
@@ -91,7 +114,7 @@ class OracleDatabase implements IDatabase {
      *  OUT_FORMAT_OBJECT: 4002
      */ 
 
-    constructor(config: oracledb.ConnectionAttributes, outFormat: number = 4002) {
+    constructor(config: IOracleConnectionOptions, outFormat: number = 4002) {
         this._config = config;
         this._outFormat = outFormat
     }
@@ -100,14 +123,14 @@ class OracleDatabase implements IDatabase {
         return this._type;
     }
 
-    async getDb(): Promise<oracledb.Connection> {
+    async getDb<T = any>(): Promise<T> {
         try {
             if (this._db) {
-                return this._db;
+                return <any> this._db;
             }
             let db = await this._init();
 
-            return db;
+            return <any> db;
         } catch (err) {
             throw err;
         }
@@ -157,7 +180,7 @@ class OracleDatabase implements IDatabase {
 interface IDatabaseFactory {
     type: TDatabaseType,
     getConfig(): Promise<IDbConfig>,
-    getDb(): Promise<TConnectionDb>,
+    getDb<T = any>(): Promise<T>,
     query(sql: string, values: any, options: { [params: string]: any }): Promise<{ rows: any[] }>,
     end(): Promise<number>
 };
@@ -184,9 +207,7 @@ class DatabaseFactory implements IDatabaseFactory {
         return this._config;
     }
 
-    async getDb<T extends 'mysql'>(): Promise<mysql.Connection>
-    async getDb<T extends 'oracle'>(): Promise<oracledb.Connection>
-    async getDb<T extends TDatabaseType>(): Promise<TConnectionDb> {
+    async getDb<T>(): Promise<T> {
         try {
             return await this._db.getDb();
         } catch (err) {
@@ -218,7 +239,6 @@ class DatabaseFactory implements IDatabaseFactory {
 
 export {
     TDatabaseType,
-    TConnectionDb,
     IDbConfig,
     IDatabase,
     IDatabaseFactory,    
