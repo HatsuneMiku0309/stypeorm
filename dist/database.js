@@ -28,7 +28,7 @@ class MysqlDatabase {
     }
     async _init() {
         try {
-            this._db = (await platform_1.PlatformTools.load(this._type)).createConnection(this._config);
+            this._db = await (await platform_1.PlatformTools.load(this._type)).createConnection(this._config);
             return this._db;
         }
         catch (err) {
@@ -95,7 +95,7 @@ class OracleDatabase {
         try {
             let database = await platform_1.PlatformTools.load(this._type);
             database.outFormat = this._outFormat;
-            this._db = (database).getConnection(this._config);
+            this._db = await (database).getConnection(this._config);
             return this._db;
         }
         catch (err) {
