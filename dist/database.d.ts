@@ -87,7 +87,7 @@ declare class DatabaseFactory implements IDatabaseFactory {
     constructor(type: TDatabaseType, config: IDbConfig);
     get type(): TDatabaseType;
     getConfig(): Promise<IDbConfig>;
-    getDb<T>(): Promise<T>;
+    getDb<T = any>(): Promise<T>;
     query(sql: string, values?: any, options?: {
         [params: string]: any;
     }): Promise<{
