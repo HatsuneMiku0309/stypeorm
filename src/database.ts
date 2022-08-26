@@ -207,7 +207,7 @@ class DatabaseFactory implements IDatabaseFactory {
         return this._config;
     }
 
-    async getDb<T>(): Promise<T> {
+    async getDb<T = any>(): Promise<T> {
         try {
             return await this._db.getDb();
         } catch (err) {

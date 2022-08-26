@@ -20,7 +20,9 @@ $ npm i
 $ npm run build
 ```
 
-4. Copy at your `project/node_modules`
+4. remove `node_modules/mysql2` & `node_modules/oracledb`
+
+5. Copy at your `project/node_modules`
 
 ### Dependencies
 **In `Compal LAN` can't use this method...**
