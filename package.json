@@ -18,6 +18,5 @@
     "oracledb": "^5.4.0"
   },
   "dependencies": {
-    "source-map-support": "^0.5.21"
   }
 }
