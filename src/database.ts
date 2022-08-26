@@ -1,8 +1,9 @@
 import oracledb = require('oracledb');
 import * as mysql from 'mysql2/promise';
+import * as mssql from 'mssql';
 import { PlatformTools } from './platform';
 
-type TDatabaseType = 'oracle' | 'mysql';
+type TDatabaseType = 'oracle' | 'mysql' | 'mssql';
 
 interface IMysqlConnectionOptions {
     user?: string,
@@ -28,7 +29,72 @@ interface IOracleConnectionOptions {
     user?: string;
 }
 
-interface IDbConfig extends IMysqlConnectionOptions, IOracleConnectionOptions {
+export enum ISOLATION_LEVEL {
+    NO_CHANGE = 0x00,
+    READ_UNCOMMITTED = 0x01,
+    READ_COMMITTED = 0x02,
+    REPEATABLE_READ = 0x03,
+    SERIALIZABLE = 0x04,
+    SNAPSHOT = 0x05
+};
+
+interface IMssqlConnectionOptions {
+    driver?: string;
+    user?: string;
+    password?: string;
+    host?: string;
+    server?: string;
+    port?: number;
+    database?: string;
+    connectionTimeout?: number;
+    requestTimeout?: number;
+    pool?: {
+        min?: number;
+        max?: number;
+        acquireTimeoutMillis?: number;
+        createTimeoutMillis?: number;
+        destroyTimeoutMillis?: number;
+        idleTimeoutMillis?: number;
+        createRetryIntervalMillis?: number;
+        reapIntervalMillis?: number;
+    };
+    arrayRowMode?: boolean;
+    options?: {
+        beforeConnect?: void;
+        connectionString?: string;
+        trustedConnection?: boolean;
+        port?: number;
+        instanceName?: string;
+        database?: string;
+        connectTimeout?: number;
+        requestTimeout?: number;
+        cancelTimeout?: number;
+        useUTC?: boolean;
+        useColumnNames?: boolean;
+        camelCaseColumns?: boolean;
+        debug?: {
+            packet?: boolean;
+            data?: boolean;
+            payload?: boolean;
+            token?: boolean;
+        };
+        isolationLevel?: ISOLATION_LEVEL;
+        connectionIsolationLevel?: ISOLATION_LEVEL;
+        readOnlyIntent?: boolean;
+        encrypt?: boolean;
+        rowCollectionOnDone?: boolean;
+        tdsVersion?: number;
+        appName?: string;
+        connectionRetryInterval?: number;
+        datefirst?: number;
+        dateFormat?: string;
+        language?: string;
+        textsize?: number;
+        trustServerCertificate?: boolean;
+    }
+}
+
+interface IDbConfig extends IMysqlConnectionOptions, IOracleConnectionOptions, IMssqlConnectionOptions {
 
 };
 
@@ -139,6 +205,105 @@ class MysqlDatabase implements IDatabase {
         try {
             if (this._db) {
                 await this._db.end();
+
+                return 1;
+            }
+
+            return 0;
+        } catch (err) {
+            throw err;
+        }
+    }
+}
+
+class MssqlDatabase implements IDatabase {
+    private _type: 'oracle' = 'oracle';
+    private _database!: typeof mssql;
+    private _db?: mssql.ConnectionPool;
+    private _config: IMssqlConnectionOptions;
+
+    constructor(config: IMssqlConnectionOptions) {
+        this._config= config;
+    }
+
+    get type() {
+        return this._type;
+    }
+
+    async getConfig(): Promise<IDbConfig> {
+        return this._config;
+    }
+
+    async getDb<T = any>(): Promise<T> {
+        try {
+            if (this._db) {
+                return <any> this._db;
+            }
+            let db = await this._init();
+
+            return <any> db;
+        } catch (err) {
+            throw err;
+        }
+    }
+
+    private async _init(): Promise<mssql.ConnectionPool> {
+        try {
+            let database = <typeof mssql> await PlatformTools.load(this._type);
+            this._database = database;
+            let _config = {
+                ...this._config,
+                server: this._config.server
+                    ? this._config.server
+                    : <string> this._config.host
+            };
+            this._db = await database.connect(_config);
+
+            return this._db;
+        } catch (err) {
+            throw err;
+        }
+    }
+    
+    async query(sql: string, values: any, options: { [params: string]: any; }): Promise<{ rows: any[]; }> {
+        try {
+            let db = await this.getDb<mssql.ConnectionPool>();
+            let request = new this._database.Request(db);
+            values.forEach((value: any, column: string) => {
+                request.input(column, value);
+            });
+            let { recordset: rows } = await request.query(sql);
+
+            return {
+                rows
+            };
+        } catch (err) {
+            throw err;
+        }
+    }
+    
+    async transaction<T>(db: T): Promise<T> {
+        try {
+            let _db = <mssql.ConnectionPool> <unknown>db;
+            let transaction = new this._database.Transaction(_db);
+            let tx = await transaction.begin();
+
+            return tx;
+        } catch (err) {
+            throw err;
+        }
+    }
+    commit<T>(db: T): Promise<void> {
+        throw new Error('Method not implemented.');
+    }
+    rollback<T>(db: T): Promise<void> {
+        throw new Error('Method not implemented.');
+    }
+
+    async end(): Promise<number> {
+        try {
+            if (this._db) {
+                await this._db.close();
 
                 return 1;
             }
@@ -264,6 +429,8 @@ class DatabaseFactory implements IDatabaseFactory {
             this._db = new MysqlDatabase(config);
         } else if (type === 'oracle') {
             this._db = new OracleDatabase(config);
+        } else if (type === 'mssql') {
+            this._db = new MssqlDatabase(config);
         } else {
             throw new Error('Unkowns type');
         }
