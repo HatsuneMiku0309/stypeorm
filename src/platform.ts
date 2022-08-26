@@ -1,6 +1,3 @@
-import { install } from 'source-map-support';
-install();
-
 import { TDatabaseType } from "./database";
 
 export class PlatformTools {

@@ -1,6 +1,3 @@
-import { install } from 'source-map-support';
-install();
-
 import oracledb = require('oracledb');
 import * as mysql from 'mysql2/promise';
 import { PlatformTools } from './platform';
