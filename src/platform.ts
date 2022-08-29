@@ -7,6 +7,8 @@ export class PlatformTools {
                 return await import('mysql2/promise');
             } else if (type === 'oracle') {
                 return await import('oracledb');
+            } else if (type === 'mssql') {
+                return await import('mssql');
             } else {
                 throw new Error('Unkowns type');
             }
