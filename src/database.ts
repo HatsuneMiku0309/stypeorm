@@ -102,7 +102,7 @@ interface IDatabase {
     type: TDatabaseType;
     getConfig(): Promise<IDbConfig>;
     getDb<T = any>(): Promise<T>;
-    query(sql: string, values: any, options: { [params: string]: any }): Promise<{ rows: any[] }>;
+    query(sql: string, values?: any, options?: { [params: string]: any }): Promise<{ rows: any[] }>;
     transaction<T>(db: T): Promise<T>;
     commit<T>(db: T): Promise<void>;
     rollback<T>(db: T): Promise<void>;
@@ -113,7 +113,7 @@ interface IDatabaseFactory {
     type: TDatabaseType;
     getConfig(): Promise<IDbConfig>;
     getDb<T = any>(): Promise<T>;
-    query(sql: string, values: any, options: { [params: string]: any }): Promise<{ rows: any[] }>;
+    query(sql: string, values?: any, options?: { [params: string]: any }): Promise<{ rows: any[] }>;
     transaction<T>(): Promise<T>;
     commit(): Promise<void>;
     rollback(): Promise<void>;
@@ -286,9 +286,9 @@ class MssqlDatabase implements IDatabase {
         try {
             let _db = <mssql.ConnectionPool> <unknown>db;
             let transaction = new this._database.Transaction(_db);
-            let tx = await transaction.begin();
+            await transaction.begin();
 
-            return tx;
+            return db;
         } catch (err) {
             throw err;
         }
