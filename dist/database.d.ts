@@ -1,4 +1,4 @@
-declare type TDatabaseType = 'oracle' | 'mysql';
+declare type TDatabaseType = 'oracle' | 'mysql' | 'mssql';
 interface IMysqlConnectionOptions {
     user?: string;
     password?: string;
@@ -21,16 +21,97 @@ interface IOracleConnectionOptions {
     password?: string;
     user?: string;
 }
-interface IDbConfig extends IMysqlConnectionOptions, IOracleConnectionOptions {
+export declare enum ISOLATION_LEVEL {
+    NO_CHANGE = 0,
+    READ_UNCOMMITTED = 1,
+    READ_COMMITTED = 2,
+    REPEATABLE_READ = 3,
+    SERIALIZABLE = 4,
+    SNAPSHOT = 5
+}
+interface IMssqlConnectionOptions {
+    driver?: string;
+    user?: string;
+    password?: string;
+    host?: string;
+    server?: string;
+    port?: number;
+    database?: string;
+    connectionTimeout?: number;
+    requestTimeout?: number;
+    pool?: {
+        min?: number;
+        max?: number;
+        acquireTimeoutMillis?: number;
+        createTimeoutMillis?: number;
+        destroyTimeoutMillis?: number;
+        idleTimeoutMillis?: number;
+        createRetryIntervalMillis?: number;
+        reapIntervalMillis?: number;
+    };
+    arrayRowMode?: boolean;
+    options?: {
+        beforeConnect?: void;
+        connectionString?: string;
+        trustedConnection?: boolean;
+        port?: number;
+        instanceName?: string;
+        database?: string;
+        connectTimeout?: number;
+        requestTimeout?: number;
+        cancelTimeout?: number;
+        useUTC?: boolean;
+        useColumnNames?: boolean;
+        camelCaseColumns?: boolean;
+        debug?: {
+            packet?: boolean;
+            data?: boolean;
+            payload?: boolean;
+            token?: boolean;
+        };
+        isolationLevel?: ISOLATION_LEVEL;
+        connectionIsolationLevel?: ISOLATION_LEVEL;
+        readOnlyIntent?: boolean;
+        encrypt?: boolean;
+        rowCollectionOnDone?: boolean;
+        tdsVersion?: number;
+        appName?: string;
+        connectionRetryInterval?: number;
+        datefirst?: number;
+        dateFormat?: string;
+        language?: string;
+        textsize?: number;
+        trustServerCertificate?: boolean;
+    };
+}
+interface IDbConfig extends IMysqlConnectionOptions, IOracleConnectionOptions, IMssqlConnectionOptions {
 }
 interface IDatabase {
     type: TDatabaseType;
+    getConfig(): Promise<IDbConfig>;
     getDb<T = any>(): Promise<T>;
-    query(sql: string, values: any, options: {
+    query(sql: string, values?: any, options?: {
         [params: string]: any;
     }): Promise<{
         rows: any[];
     }>;
+    transaction<T>(db: T): Promise<T>;
+    commit<T>(db: T): Promise<void>;
+    rollback<T>(db: T): Promise<void>;
+    end(): Promise<number>;
+}
+interface IDatabaseFactory {
+    type: TDatabaseType;
+    getConfig(): Promise<IDbConfig>;
+    getDb<T = any>(): Promise<T>;
+    query(sql: string, values?: any, options?: {
+        [params: string]: any;
+    }): Promise<{
+        rows: any[];
+    }>;
+    transaction<T>(): Promise<T>;
+    commit(): Promise<void>;
+    rollback(): Promise<void>;
     end(): Promise<number>;
 }
 declare class MysqlDatabase implements IDatabase {
@@ -39,6 +120,7 @@ declare class MysqlDatabase implements IDatabase {
     private _config;
     constructor(config: IMysqlConnectionOptions);
     get type(): "mysql";
+    getConfig(): Promise<IDbConfig>;
     getDb<T = any>(): Promise<T>;
     private _init;
     query(sql: string, values?: any, options?: {
@@ -46,6 +128,9 @@ declare class MysqlDatabase implements IDatabase {
     }): Promise<{
         rows: any[];
     }>;
+    transaction<T>(db: T): Promise<T>;
+    commit<T>(db: T): Promise<void>;
+    rollback<T>(db: T): Promise<void>;
     end(): Promise<number>;
 }
 declare class OracleDatabase implements IDatabase {
@@ -61,6 +146,7 @@ declare class OracleDatabase implements IDatabase {
      */
     constructor(config: IOracleConnectionOptions, outFormat?: number);
     get type(): "oracle";
+    getConfig(): Promise<IDbConfig>;
     getDb<T = any>(): Promise<T>;
     private _init;
     query(sql: string, values?: any, options?: {
@@ -68,17 +154,9 @@ declare class OracleDatabase implements IDatabase {
     }): Promise<{
         rows: any[];
     }>;
-    end(): Promise<number>;
-}
-interface IDatabaseFactory {
-    type: TDatabaseType;
-    getConfig(): Promise<IDbConfig>;
-    getDb<T = any>(): Promise<T>;
-    query(sql: string, values: any, options: {
-        [params: string]: any;
-    }): Promise<{
-        rows: any[];
-    }>;
+    transaction<T>(db: T): Promise<T>;
+    commit<T>(db: T): Promise<void>;
+    rollback<T>(db: T): Promise<void>;
     end(): Promise<number>;
 }
 declare class DatabaseFactory implements IDatabaseFactory {
@@ -93,6 +171,9 @@ declare class DatabaseFactory implements IDatabaseFactory {
     }): Promise<{
         rows: any[];
     }>;
+    transaction<T>(): Promise<T>;
+    commit(): Promise<void>;
+    rollback(): Promise<void>;
     end(): Promise<number>;
 }
 export { TDatabaseType, IDbConfig, IDatabase, IDatabaseFactory, MysqlDatabase, OracleDatabase, DatabaseFactory };

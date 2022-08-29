@@ -10,6 +10,9 @@ class PlatformTools {
             else if (type === 'oracle') {
                 return await Promise.resolve().then(() => require('oracledb'));
             }
+            else if (type === 'mssql') {
+                return await Promise.resolve().then(() => require('mssql'));
+            }
             else {
                 throw new Error('Unkowns type');
             }
