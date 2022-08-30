@@ -101,20 +101,22 @@ interface IDbConfig extends IMysqlConnectionOptions, IOracleConnectionOptions, I
 interface IDatabase {
     type: TDatabaseType;
     getConfig(): Promise<IDbConfig>;
+    getDatabase<T = any>(): Promise<T>;
     getDb<T = any>(): Promise<T>;
     query(sql: string, values?: any, options?: { [params: string]: any }): Promise<{ rows: any[] }>;
-    transaction<T>(db: T): Promise<T>;
-    commit<T>(db: T): Promise<void>;
-    rollback<T>(db: T): Promise<void>;
+    transaction<T>(db: T): Promise<void>;
+    commit(): Promise<void>;
+    rollback(): Promise<void>;
     end(): Promise<number>;
 };
 
 interface IDatabaseFactory {
     type: TDatabaseType;
     getConfig(): Promise<IDbConfig>;
-    getDb<T = any>(): Promise<T>;
+    getDatabase<T = any>(): Promise<T>;
+    getDb(): Promise<IDatabase>;
     query(sql: string, values?: any, options?: { [params: string]: any }): Promise<{ rows: any[] }>;
-    transaction<T>(): Promise<T>;
+    transaction(): Promise<void>;
     commit(): Promise<void>;
     rollback(): Promise<void>;
     end(): Promise<number>;
@@ -122,6 +124,7 @@ interface IDatabaseFactory {
 
 class MysqlDatabase implements IDatabase {
     private _type: 'mysql' = 'mysql';
+    private _database!: typeof mysql;
     private _db?: mysql.Connection;
     private _config: IMysqlConnectionOptions;
     constructor(config: IMysqlConnectionOptions) {
@@ -134,6 +137,14 @@ class MysqlDatabase implements IDatabase {
 
     async getConfig(): Promise<IDbConfig> {
         return this._config;
+    }
+
+    async getDatabase<T = any>(): Promise<T> {
+        try {
+            return <any> this._database;
+        } catch (err) {
+            throw err;
+        }
     }
 
     async getDb<T = any>(): Promise<T> {
@@ -151,7 +162,9 @@ class MysqlDatabase implements IDatabase {
     
     private async _init(): Promise<mysql.Connection> {
         try {
-            this._db = await (<typeof mysql>await PlatformTools.load(this._type)).createConnection(this._config);
+            let database = <typeof mysql> await PlatformTools.load(this._type);
+            this._database = database;
+            this._db = await database.createConnection(this._config);
 
             return this._db;
         } catch (err) {
@@ -172,30 +185,30 @@ class MysqlDatabase implements IDatabase {
         }
     }
 
-    async transaction<T>(db: T): Promise<T> {
+    async transaction<T>(db: T): Promise<void> {
         try {
             let _db = <mysql.Connection> <unknown>db;
             await _db.beginTransaction();
-
-            return db;
         } catch (err) {
             throw err;
         }
     }
 
-    async commit<T>(db: T): Promise<void> {
+    async commit(): Promise<void> {
         try {
-            let _db = <mysql.Connection> <unknown>db;
-            await _db.commit();
+            if (this._db) {
+                await this._db.commit();
+            }
         } catch (err) {
             throw err;
         }
     }
 
-    async rollback<T>(db: T): Promise<void> {
+    async rollback(): Promise<void> {
         try {
-            let _db = <mysql.Connection> <unknown>db;
-            await _db.rollback();
+            if (this._db) {
+                await this._db.rollback();
+            }
         } catch (err) {
             throw err;
         }
@@ -205,6 +218,7 @@ class MysqlDatabase implements IDatabase {
         try {
             if (this._db) {
                 await this._db.end();
+                this._db = undefined;
 
                 return 1;
             }
@@ -220,6 +234,7 @@ class MssqlDatabase implements IDatabase {
     private _type: 'oracle' = 'oracle';
     private _database!: typeof mssql;
     private _db?: mssql.ConnectionPool;
+    private _tx?: mssql.Transaction;
     private _config: IMssqlConnectionOptions;
 
     constructor(config: IMssqlConnectionOptions) {
@@ -234,8 +249,30 @@ class MssqlDatabase implements IDatabase {
         return this._config;
     }
 
+    async getDatabase<T = any>(): Promise<T> {
+        try {
+            return <any> this._database;
+        } catch (err) {
+            throw err;
+        }
+    }
+
+    /**
+     * @descript
+     *  If have `tx`(transaction), return tx.
+     * 
+     *  How to knowns return `tx` or `db`?, when call The method after called `transaction()`.
+     * 
+     *  When you called `commit` or `rollback`, you call again the method get `db`
+     * 
+     * @returns 
+     */
     async getDb<T = any>(): Promise<T> {
         try {
+            if (this._tx) {
+                return <any> this._tx;
+            }
+
             if (this._db) {
                 return <any> this._db;
             }
@@ -265,9 +302,24 @@ class MssqlDatabase implements IDatabase {
         }
     }
     
+    /**
+     * 
+     * @param sql 
+     * @param values 
+     * @param options 
+     * @returns 
+     * 
+     * @descript
+     *  If have `tx`(transaction), first use `tx`.
+     * 
+     * @exmple
+     * Prepared Statement:
+     * 
+     *      sql: `SELECT * FROM test WHERE ID = @ID`; values: `{ ID: 123 }`
+     */
     async query(sql: string, values: any, options: { [params: string]: any; }): Promise<{ rows: any[]; }> {
         try {
-            let db = await this.getDb<mssql.ConnectionPool>();
+            let db = await this.getDb<mssql.ConnectionPool & mssql.Transaction>();
             let request = new this._database.Request(db);
             values.forEach((value: any, column: string) => {
                 request.input(column, value);
@@ -282,28 +334,50 @@ class MssqlDatabase implements IDatabase {
         }
     }
     
-    async transaction<T>(db: T): Promise<T> {
+    /**
+     * 
+     * @param db 
+     */
+    async transaction<T>(db: T): Promise<void> {
         try {
+            if (this._tx) {
+                return ;
+            }
+
             let _db = <mssql.ConnectionPool> <unknown>db;
             let transaction = new this._database.Transaction(_db);
             await transaction.begin();
-
-            return db;
+            this._tx = transaction;
         } catch (err) {
             throw err;
         }
     }
-    commit<T>(db: T): Promise<void> {
-        throw new Error('Method not implemented.');
+
+    async commit(): Promise<void> {
+        try {
+            if (this._tx) {
+                await this._tx.commit();
+            }
+        } catch (err) {
+            throw err;
+        }
     }
-    rollback<T>(db: T): Promise<void> {
-        throw new Error('Method not implemented.');
+
+    async rollback(): Promise<void> {
+        try {
+            if (this._tx) {
+                await this._tx.rollback();
+            }
+        } catch (err) {
+            throw err;
+        }
     }
 
     async end(): Promise<number> {
         try {
             if (this._db) {
                 await this._db.close();
+                this._db = undefined;
 
                 return 1;
             }
@@ -317,6 +391,7 @@ class MssqlDatabase implements IDatabase {
 
 class OracleDatabase implements IDatabase {
     private _type: 'oracle' = 'oracle';
+    private _database!: typeof oracledb;
     private _db?: oracledb.Connection;
     private _config: IOracleConnectionOptions;
     private _outFormat: number;
@@ -340,6 +415,14 @@ class OracleDatabase implements IDatabase {
         return this._config;
     }
 
+    async getDatabase<T = any>(): Promise<T> {
+        try {
+            return <any> this._database;
+        } catch (err) {
+            throw err;
+        }
+    }
+
     async getDb<T = any>(): Promise<T> {
         try {
             if (this._db) {
@@ -357,6 +440,8 @@ class OracleDatabase implements IDatabase {
         try {
             let database = <typeof oracledb> await PlatformTools.load(this._type);
             database.outFormat = this._outFormat;
+            this._database = database;
+            this._database.autoCommit = true;
             this._db = await database.getConnection(this._config);
 
             return this._db;
@@ -368,7 +453,7 @@ class OracleDatabase implements IDatabase {
     async query(sql: string, values: any = [], options: { [params: string]: any } = { }): Promise<{ rows: any[] }> {
         try {
             let db = await this.getDb<oracledb.Connection>();
-            let result = await db.execute(sql, values);
+            let result = await db.execute(sql, values, options);
             let rows = result.rows || [];
 
             return {
@@ -379,27 +464,32 @@ class OracleDatabase implements IDatabase {
         }
     }
 
-    async transaction<T>(db: T): Promise<T> {
+    async transaction<T>(db: T): Promise<void> {
         try {
-            return db;
+            this._database.autoCommit = false;
         } catch (err) {
             throw err;
         }
     }
 
-    async commit<T>(db: T): Promise<void> {
+    async commit(): Promise<void> {
         try {
-            let _db = <oracledb.Connection> <unknown> db;
-            await _db.commit();
+            if (this._db) {
+                await this._db.commit();
+            }
+            this._database.autoCommit = true;
         } catch (err) {
             throw err;
         }
     }
 
-    async rollback<T>(db: T): Promise<void> {
+    async rollback(): Promise<void> {
         try {
-            let _db = <oracledb.Connection> <unknown>db;
-            await _db.rollback();
+            if (this._db) {
+                await this._db.rollback();
+            }
+
+            this._database.autoCommit = true;
         } catch (err) {
             throw err;
         }
@@ -409,6 +499,7 @@ class OracleDatabase implements IDatabase {
         try {
             if (this._db) {
                 await this._db.close();
+                this._db = undefined;
 
                 return 1;
             }
@@ -444,9 +535,17 @@ class DatabaseFactory implements IDatabaseFactory {
         return await this._config;
     }
 
-    async getDb<T = any>(): Promise<T> {
+    async getDatabase<T = any>(): Promise<T> {
         try {
-            return await this._db.getDb();
+            return await this._db.getDatabase();
+        } catch (err) {
+            throw err;
+        }
+    }
+
+    async getDb(): Promise<IDatabase> {
+        try {
+            return this._db;
         } catch (err) {
             throw err;
         }
@@ -462,12 +561,10 @@ class DatabaseFactory implements IDatabaseFactory {
         }
     }
 
-    async transaction<T>(): Promise<T> {
+    async transaction(): Promise<void> {
         try {
-            let db = await this.getDb<T>();
-            let _db = await this._db.transaction(db);
-
-            return _db;
+            let db = await (await this.getDb()).getDb();
+            await this._db.transaction(db);
         } catch (err) {
             throw err;
         }
@@ -475,8 +572,7 @@ class DatabaseFactory implements IDatabaseFactory {
 
     async commit(): Promise<void> {
         try {
-            let db = await this.getDb();
-            await this._db.commit(db);
+            await this._db.commit();
         } catch (err) {
             throw err;
         }
@@ -484,8 +580,7 @@ class DatabaseFactory implements IDatabaseFactory {
 
     async rollback(): Promise<void> {
         try {
-            let db = await this.getDb();
-            await this._db.rollback(db);
+            await this._db.rollback();
         } catch (err) {
             throw err;
         }
