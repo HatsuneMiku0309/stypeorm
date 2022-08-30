@@ -89,38 +89,42 @@ interface IDbConfig extends IMysqlConnectionOptions, IOracleConnectionOptions, I
 interface IDatabase {
     type: TDatabaseType;
     getConfig(): Promise<IDbConfig>;
+    getDatabase<T = any>(): Promise<T>;
     getDb<T = any>(): Promise<T>;
     query(sql: string, values?: any, options?: {
         [params: string]: any;
     }): Promise<{
         rows: any[];
     }>;
-    transaction<T>(db: T): Promise<T>;
-    commit<T>(db: T): Promise<void>;
-    rollback<T>(db: T): Promise<void>;
+    transaction<T>(db: T): Promise<void>;
+    commit(): Promise<void>;
+    rollback(): Promise<void>;
     end(): Promise<number>;
 }
 interface IDatabaseFactory {
     type: TDatabaseType;
     getConfig(): Promise<IDbConfig>;
-    getDb<T = any>(): Promise<T>;
+    getDatabase<T = any>(): Promise<T>;
+    getDb(): Promise<IDatabase>;
     query(sql: string, values?: any, options?: {
         [params: string]: any;
     }): Promise<{
         rows: any[];
     }>;
-    transaction<T>(): Promise<T>;
+    transaction(): Promise<void>;
     commit(): Promise<void>;
     rollback(): Promise<void>;
     end(): Promise<number>;
 }
 declare class MysqlDatabase implements IDatabase {
     private _type;
+    private _database;
     private _db?;
     private _config;
     constructor(config: IMysqlConnectionOptions);
     get type(): "mysql";
     getConfig(): Promise<IDbConfig>;
+    getDatabase<T = any>(): Promise<T>;
     getDb<T = any>(): Promise<T>;
     private _init;
     query(sql: string, values?: any, options?: {
@@ -128,13 +132,14 @@ declare class MysqlDatabase implements IDatabase {
     }): Promise<{
         rows: any[];
     }>;
-    transaction<T>(db: T): Promise<T>;
-    commit<T>(db: T): Promise<void>;
-    rollback<T>(db: T): Promise<void>;
+    transaction<T>(db: T): Promise<void>;
+    commit(): Promise<void>;
+    rollback(): Promise<void>;
     end(): Promise<number>;
 }
 declare class OracleDatabase implements IDatabase {
     private _type;
+    private _database;
     private _db?;
     private _config;
     private _outFormat;
@@ -147,6 +152,7 @@ declare class OracleDatabase implements IDatabase {
     constructor(config: IOracleConnectionOptions, outFormat?: number);
     get type(): "oracle";
     getConfig(): Promise<IDbConfig>;
+    getDatabase<T = any>(): Promise<T>;
     getDb<T = any>(): Promise<T>;
     private _init;
     query(sql: string, values?: any, options?: {
@@ -154,9 +160,9 @@ declare class OracleDatabase implements IDatabase {
     }): Promise<{
         rows: any[];
     }>;
-    transaction<T>(db: T): Promise<T>;
-    commit<T>(db: T): Promise<void>;
-    rollback<T>(db: T): Promise<void>;
+    transaction<T>(db: T): Promise<void>;
+    commit(): Promise<void>;
+    rollback(): Promise<void>;
     end(): Promise<number>;
 }
 declare class DatabaseFactory implements IDatabaseFactory {
@@ -165,13 +171,14 @@ declare class DatabaseFactory implements IDatabaseFactory {
     constructor(type: TDatabaseType, config: IDbConfig);
     get type(): TDatabaseType;
     getConfig(): Promise<IDbConfig>;
-    getDb<T = any>(): Promise<T>;
+    getDatabase<T = any>(): Promise<T>;
+    getDb(): Promise<IDatabase>;
     query(sql: string, values?: any, options?: {
         [params: string]: any;
     }): Promise<{
         rows: any[];
     }>;
-    transaction<T>(): Promise<T>;
+    transaction(): Promise<void>;
     commit(): Promise<void>;
     rollback(): Promise<void>;
     end(): Promise<number>;

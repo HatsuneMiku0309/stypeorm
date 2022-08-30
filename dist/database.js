@@ -17,6 +17,7 @@ var ISOLATION_LEVEL;
 ;
 class MysqlDatabase {
     _type = 'mysql';
+    _database;
     _db;
     _config;
     constructor(config) {
@@ -27,6 +28,14 @@ class MysqlDatabase {
     }
     async getConfig() {
         return this._config;
+    }
+    async getDatabase() {
+        try {
+            return this._database;
+        }
+        catch (err) {
+            throw err;
+        }
     }
     async getDb() {
         try {
@@ -42,7 +51,9 @@ class MysqlDatabase {
     }
     async _init() {
         try {
-            this._db = await (await platform_1.PlatformTools.load(this._type)).createConnection(this._config);
+            let database = await platform_1.PlatformTools.load(this._type);
+            this._database = database;
+            this._db = await database.createConnection(this._config);
             return this._db;
         }
         catch (err) {
@@ -65,25 +76,26 @@ class MysqlDatabase {
         try {
             let _db = db;
             await _db.beginTransaction();
-            return db;
         }
         catch (err) {
             throw err;
         }
     }
-    async commit(db) {
+    async commit() {
         try {
-            let _db = db;
-            await _db.commit();
+            if (this._db) {
+                await this._db.commit();
+            }
         }
         catch (err) {
             throw err;
         }
     }
-    async rollback(db) {
+    async rollback() {
         try {
-            let _db = db;
-            await _db.rollback();
+            if (this._db) {
+                await this._db.rollback();
+            }
         }
         catch (err) {
             throw err;
@@ -93,6 +105,7 @@ class MysqlDatabase {
         try {
             if (this._db) {
                 await this._db.end();
+                this._db = undefined;
                 return 1;
             }
             return 0;
@@ -107,6 +120,7 @@ class MssqlDatabase {
     _type = 'oracle';
     _database;
     _db;
+    _tx;
     _config;
     constructor(config) {
         this._config = config;
@@ -117,8 +131,29 @@ class MssqlDatabase {
     async getConfig() {
         return this._config;
     }
+    async getDatabase() {
+        try {
+            return this._database;
+        }
+        catch (err) {
+            throw err;
+        }
+    }
+    /**
+     * @descript
+     *  If have `tx`(transaction), return tx.
+     *
+     *  How to knowns return `tx` or `db`?, when call The method after called `transaction()`.
+     *
+     *  When you called `commit` or `rollback`, you call again the method get `db`
+     *
+     * @returns
+     */
     async getDb() {
         try {
+            if (this._tx) {
+                return this._tx;
+            }
             if (this._db) {
                 return this._db;
             }
@@ -146,6 +181,21 @@ class MssqlDatabase {
             throw err;
         }
     }
+    /**
+     *
+     * @param sql
+     * @param values
+     * @param options
+     * @returns
+     *
+     * @descript
+     *  If have `tx`(transaction), first use `tx`.
+     *
+     * @exmple
+     * Prepared Statement:
+     *
+     *      sql: `SELECT * FROM test WHERE ID = @ID`; values: `{ ID: 123 }`
+     */
     async query(sql, values, options) {
         try {
             let db = await this.getDb();
@@ -162,27 +212,49 @@ class MssqlDatabase {
             throw err;
         }
     }
+    /**
+     *
+     * @param db
+     */
     async transaction(db) {
         try {
+            if (this._tx) {
+                return;
+            }
             let _db = db;
             let transaction = new this._database.Transaction(_db);
             await transaction.begin();
-            return db;
+            this._tx = transaction;
         }
         catch (err) {
             throw err;
         }
     }
-    commit(db) {
-        throw new Error('Method not implemented.');
+    async commit() {
+        try {
+            if (this._tx) {
+                await this._tx.commit();
+            }
+        }
+        catch (err) {
+            throw err;
+        }
     }
-    rollback(db) {
-        throw new Error('Method not implemented.');
+    async rollback() {
+        try {
+            if (this._tx) {
+                await this._tx.rollback();
+            }
+        }
+        catch (err) {
+            throw err;
+        }
     }
     async end() {
         try {
             if (this._db) {
                 await this._db.close();
+                this._db = undefined;
                 return 1;
             }
             return 0;
@@ -194,6 +266,7 @@ class MssqlDatabase {
 }
 class OracleDatabase {
     _type = 'oracle';
+    _database;
     _db;
     _config;
     _outFormat;
@@ -213,6 +286,14 @@ class OracleDatabase {
     async getConfig() {
         return this._config;
     }
+    async getDatabase() {
+        try {
+            return this._database;
+        }
+        catch (err) {
+            throw err;
+        }
+    }
     async getDb() {
         try {
             if (this._db) {
@@ -229,6 +310,8 @@ class OracleDatabase {
         try {
             let database = await platform_1.PlatformTools.load(this._type);
             database.outFormat = this._outFormat;
+            this._database = database;
+            this._database.autoCommit = true;
             this._db = await database.getConnection(this._config);
             return this._db;
         }
@@ -239,7 +322,7 @@ class OracleDatabase {
     async query(sql, values = [], options = {}) {
         try {
             let db = await this.getDb();
-            let result = await db.execute(sql, values);
+            let result = await db.execute(sql, values, options);
             let rows = result.rows || [];
             return {
                 rows: rows
@@ -251,25 +334,29 @@ class OracleDatabase {
     }
     async transaction(db) {
         try {
-            return db;
+            this._database.autoCommit = false;
         }
         catch (err) {
             throw err;
         }
     }
-    async commit(db) {
+    async commit() {
         try {
-            let _db = db;
-            await _db.commit();
+            if (this._db) {
+                await this._db.commit();
+            }
+            this._database.autoCommit = true;
         }
         catch (err) {
             throw err;
         }
     }
-    async rollback(db) {
+    async rollback() {
         try {
-            let _db = db;
-            await _db.rollback();
+            if (this._db) {
+                await this._db.rollback();
+            }
+            this._database.autoCommit = true;
         }
         catch (err) {
             throw err;
@@ -279,6 +366,7 @@ class OracleDatabase {
         try {
             if (this._db) {
                 await this._db.close();
+                this._db = undefined;
                 return 1;
             }
             return 0;
@@ -313,9 +401,17 @@ class DatabaseFactory {
     async getConfig() {
         return await this._config;
     }
+    async getDatabase() {
+        try {
+            return await this._db.getDatabase();
+        }
+        catch (err) {
+            throw err;
+        }
+    }
     async getDb() {
         try {
-            return await this._db.getDb();
+            return this._db;
         }
         catch (err) {
             throw err;
@@ -332,9 +428,8 @@ class DatabaseFactory {
     }
     async transaction() {
         try {
-            let db = await this.getDb();
-            let _db = await this._db.transaction(db);
-            return _db;
+            let db = await (await this.getDb()).getDb();
+            await this._db.transaction(db);
         }
         catch (err) {
             throw err;
@@ -342,8 +437,7 @@ class DatabaseFactory {
     }
     async commit() {
         try {
-            let db = await this.getDb();
-            await this._db.commit(db);
+            await this._db.commit();
         }
         catch (err) {
             throw err;
@@ -351,8 +445,7 @@ class DatabaseFactory {
     }
     async rollback() {
         try {
-            let db = await this.getDb();
-            await this._db.rollback(db);
+            await this._db.rollback();
         }
         catch (err) {
             throw err;
