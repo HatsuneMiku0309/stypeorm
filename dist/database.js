@@ -39,11 +39,23 @@ class MysqlDatabase {
     }
     async getDb() {
         try {
-            if (this._db) {
-                return this._db;
+            if (!this._db) {
+                throw new Error('No connection');
             }
-            let db = await this._init();
-            return db;
+            return this._db;
+        }
+        catch (err) {
+            throw err;
+        }
+    }
+    async connect() {
+        try {
+            if (this._database) {
+                this._db = await this._database.createConnection(this._config);
+            }
+            else {
+                await this._init();
+            }
         }
         catch (err) {
             throw err;
@@ -151,14 +163,32 @@ class MssqlDatabase {
      */
     async getDb() {
         try {
+            if (!this._db) {
+                throw new Error('No connection');
+            }
             if (this._tx) {
                 return this._tx;
             }
-            if (this._db) {
-                return this._db;
+            return this._db;
+        }
+        catch (err) {
+            throw err;
+        }
+    }
+    async connect() {
+        try {
+            if (this._database) {
+                let _config = {
+                    ...this._config,
+                    server: this._config.server
+                        ? this._config.server
+                        : this._config.host
+                };
+                this._db = await this._database.connect(_config);
             }
-            let db = await this._init();
-            return db;
+            else {
+                await this._init();
+            }
         }
         catch (err) {
             throw err;
@@ -234,6 +264,7 @@ class MssqlDatabase {
         try {
             if (this._tx) {
                 await this._tx.commit();
+                this._tx = undefined;
             }
         }
         catch (err) {
@@ -244,6 +275,7 @@ class MssqlDatabase {
         try {
             if (this._tx) {
                 await this._tx.rollback();
+                this._tx = undefined;
             }
         }
         catch (err) {
@@ -296,11 +328,23 @@ class OracleDatabase {
     }
     async getDb() {
         try {
-            if (this._db) {
-                return this._db;
+            if (!this._db) {
+                throw new Error('No connection');
             }
-            let db = await this._init();
-            return db;
+            return this._db;
+        }
+        catch (err) {
+            throw err;
+        }
+    }
+    async connect() {
+        try {
+            if (this._database) {
+                this._db = await this._database.getConnection(this._config);
+            }
+            else {
+                await this._init();
+            }
         }
         catch (err) {
             throw err;
@@ -412,6 +456,15 @@ class DatabaseFactory {
     async getDb() {
         try {
             return this._db;
+        }
+        catch (err) {
+            throw err;
+        }
+    }
+    async connect() {
+        try {
+            let db = await this.getDb();
+            await db.connect();
         }
         catch (err) {
             throw err;
