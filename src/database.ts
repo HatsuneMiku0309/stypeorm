@@ -103,6 +103,7 @@ interface IDatabase {
     getConfig(): Promise<IDbConfig>;
     getDatabase<T = any>(): Promise<T>;
     getDb<T = any>(): Promise<T>;
+    connect(): Promise<void>;
     query(sql: string, values?: any, options?: { [params: string]: any }): Promise<{ rows: any[] }>;
     transaction<T>(db: T): Promise<void>;
     commit(): Promise<void>;
@@ -115,6 +116,7 @@ interface IDatabaseFactory {
     getConfig(): Promise<IDbConfig>;
     getDatabase<T = any>(): Promise<T>;
     getDb(): Promise<IDatabase>;
+    connect(): Promise<void>;
     query(sql: string, values?: any, options?: { [params: string]: any }): Promise<{ rows: any[] }>;
     transaction(): Promise<void>;
     commit(): Promise<void>;
@@ -149,12 +151,23 @@ class MysqlDatabase implements IDatabase {
 
     async getDb<T = any>(): Promise<T> {
         try {
-            if (this._db) {
-                return <any> this._db;
+            if (!this._db) {
+                throw new Error('No connection');
             }
-            let db = await this._init();
 
-            return <any> db;
+            return <any> this._db;
+        } catch (err) {
+            throw err;
+        }
+    }
+
+    async connect(): Promise<void> {
+        try {
+            if (this._database) {
+                this._db = await this._database.createConnection(this._config);
+            } else {
+                await this._init();
+            }
         } catch (err) {
             throw err;
         }
@@ -269,16 +282,33 @@ class MssqlDatabase implements IDatabase {
      */
     async getDb<T = any>(): Promise<T> {
         try {
+            if (!this._db) {
+                throw new Error('No connection');
+            }
+
             if (this._tx) {
                 return <any> this._tx;
             }
 
-            if (this._db) {
-                return <any> this._db;
-            }
-            let db = await this._init();
+            return <any> this._db;
+        } catch (err) {
+            throw err;
+        }
+    }
 
-            return <any> db;
+    async connect(): Promise<void> {
+        try {
+            if (this._database) {
+                let _config = {
+                    ...this._config,
+                    server: this._config.server
+                        ? this._config.server
+                        : <string> this._config.host
+                };
+                this._db = await this._database.connect(_config);
+            } else {
+                await this._init();
+            }
         } catch (err) {
             throw err;
         }
@@ -357,6 +387,7 @@ class MssqlDatabase implements IDatabase {
         try {
             if (this._tx) {
                 await this._tx.commit();
+                this._tx = undefined;
             }
         } catch (err) {
             throw err;
@@ -367,6 +398,7 @@ class MssqlDatabase implements IDatabase {
         try {
             if (this._tx) {
                 await this._tx.rollback();
+                this._tx = undefined;
             }
         } catch (err) {
             throw err;
@@ -425,12 +457,23 @@ class OracleDatabase implements IDatabase {
 
     async getDb<T = any>(): Promise<T> {
         try {
-            if (this._db) {
-                return <any> this._db;
+            if (!this._db) {
+                throw new Error('No connection');
             }
-            let db = await this._init();
 
-            return <any> db;
+            return <any> this._db;
+        } catch (err) {
+            throw err;
+        }
+    }
+
+    async connect(): Promise<void> {
+        try {
+            if (this._database) {
+                this._db = await this._database.getConnection(this._config);
+            } else {
+                await this._init();
+            }
         } catch (err) {
             throw err;
         }
@@ -546,6 +589,15 @@ class DatabaseFactory implements IDatabaseFactory {
     async getDb(): Promise<IDatabase> {
         try {
             return this._db;
+        } catch (err) {
+            throw err;
+        }
+    }
+
+    async connect(): Promise<void> {
+        try {
+            let db = await this.getDb();
+            await db.connect();
         } catch (err) {
             throw err;
         }
