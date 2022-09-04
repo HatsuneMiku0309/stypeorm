@@ -56,6 +56,7 @@ class MysqlDatabase {
             else {
                 await this._init();
             }
+            return this;
         }
         catch (err) {
             throw err;
@@ -189,6 +190,7 @@ class MssqlDatabase {
             else {
                 await this._init();
             }
+            return this;
         }
         catch (err) {
             throw err;
@@ -345,6 +347,7 @@ class OracleDatabase {
             else {
                 await this._init();
             }
+            return this;
         }
         catch (err) {
             throw err;
@@ -463,8 +466,8 @@ class DatabaseFactory {
     }
     async connect() {
         try {
-            let db = await this.getDb();
-            await db.connect();
+            let db = await this._db.connect();
+            return db;
         }
         catch (err) {
             throw err;

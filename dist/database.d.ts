@@ -91,7 +91,7 @@ interface IDatabase {
     getConfig(): Promise<IDbConfig>;
     getDatabase<T = any>(): Promise<T>;
     getDb<T = any>(): Promise<T>;
-    connect(): Promise<void>;
+    connect(): Promise<IDatabase>;
     query(sql: string, values?: any, options?: {
         [params: string]: any;
     }): Promise<{
@@ -107,7 +107,7 @@ interface IDatabaseFactory {
     getConfig(): Promise<IDbConfig>;
     getDatabase<T = any>(): Promise<T>;
     getDb(): Promise<IDatabase>;
-    connect(): Promise<void>;
+    connect(): Promise<IDatabase>;
     query(sql: string, values?: any, options?: {
         [params: string]: any;
     }): Promise<{
@@ -128,7 +128,7 @@ declare class MysqlDatabase implements IDatabase {
     getConfig(): Promise<IDbConfig>;
     getDatabase<T = any>(): Promise<T>;
     getDb<T = any>(): Promise<T>;
-    connect(): Promise<void>;
+    connect(): Promise<IDatabase>;
     private _init;
     query(sql: string, values?: any, options?: {
         [params: string]: any;
@@ -157,7 +157,7 @@ declare class OracleDatabase implements IDatabase {
     getConfig(): Promise<IDbConfig>;
     getDatabase<T = any>(): Promise<T>;
     getDb<T = any>(): Promise<T>;
-    connect(): Promise<void>;
+    connect(): Promise<IDatabase>;
     private _init;
     query(sql: string, values?: any, options?: {
         [params: string]: any;
@@ -177,7 +177,7 @@ declare class DatabaseFactory implements IDatabaseFactory {
     getConfig(): Promise<IDbConfig>;
     getDatabase<T = any>(): Promise<T>;
     getDb(): Promise<IDatabase>;
-    connect(): Promise<void>;
+    connect(): Promise<IDatabase>;
     query(sql: string, values?: any, options?: {
         [params: string]: any;
     }): Promise<{
