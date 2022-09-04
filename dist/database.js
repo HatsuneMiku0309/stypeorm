@@ -466,8 +466,8 @@ class DatabaseFactory {
     }
     async connect() {
         try {
-            let db = await this._db.connect();
-            return db;
+            await this._db.connect();
+            return this;
         }
         catch (err) {
             throw err;

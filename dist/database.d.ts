@@ -107,7 +107,7 @@ interface IDatabaseFactory {
     getConfig(): Promise<IDbConfig>;
     getDatabase<T = any>(): Promise<T>;
     getDb(): Promise<IDatabase>;
-    connect(): Promise<IDatabase>;
+    connect(): Promise<IDatabaseFactory>;
     query(sql: string, values?: any, options?: {
         [params: string]: any;
     }): Promise<{
@@ -177,7 +177,7 @@ declare class DatabaseFactory implements IDatabaseFactory {
     getConfig(): Promise<IDbConfig>;
     getDatabase<T = any>(): Promise<T>;
     getDb(): Promise<IDatabase>;
-    connect(): Promise<IDatabase>;
+    connect(): Promise<IDatabaseFactory>;
     query(sql: string, values?: any, options?: {
         [params: string]: any;
     }): Promise<{
