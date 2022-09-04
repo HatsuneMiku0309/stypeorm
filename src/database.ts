@@ -103,7 +103,7 @@ interface IDatabase {
     getConfig(): Promise<IDbConfig>;
     getDatabase<T = any>(): Promise<T>;
     getDb<T = any>(): Promise<T>;
-    connect(): Promise<void>;
+    connect(): Promise<IDatabase>;
     query(sql: string, values?: any, options?: { [params: string]: any }): Promise<{ rows: any[] }>;
     transaction<T>(db: T): Promise<void>;
     commit(): Promise<void>;
@@ -116,7 +116,7 @@ interface IDatabaseFactory {
     getConfig(): Promise<IDbConfig>;
     getDatabase<T = any>(): Promise<T>;
     getDb(): Promise<IDatabase>;
-    connect(): Promise<void>;
+    connect(): Promise<IDatabase>;
     query(sql: string, values?: any, options?: { [params: string]: any }): Promise<{ rows: any[] }>;
     transaction(): Promise<void>;
     commit(): Promise<void>;
@@ -161,13 +161,15 @@ class MysqlDatabase implements IDatabase {
         }
     }
 
-    async connect(): Promise<void> {
+    async connect(): Promise<IDatabase> {
         try {
             if (this._database) {
                 this._db = await this._database.createConnection(this._config);
             } else {
                 await this._init();
             }
+
+            return this;
         } catch (err) {
             throw err;
         }
@@ -296,7 +298,7 @@ class MssqlDatabase implements IDatabase {
         }
     }
 
-    async connect(): Promise<void> {
+    async connect(): Promise<IDatabase> {
         try {
             if (this._database) {
                 let _config = {
@@ -309,6 +311,8 @@ class MssqlDatabase implements IDatabase {
             } else {
                 await this._init();
             }
+
+            return this;
         } catch (err) {
             throw err;
         }
@@ -467,13 +471,15 @@ class OracleDatabase implements IDatabase {
         }
     }
 
-    async connect(): Promise<void> {
+    async connect(): Promise<IDatabase> {
         try {
             if (this._database) {
                 this._db = await this._database.getConnection(this._config);
             } else {
                 await this._init();
             }
+
+            return this;
         } catch (err) {
             throw err;
         }
@@ -594,10 +600,11 @@ class DatabaseFactory implements IDatabaseFactory {
         }
     }
 
-    async connect(): Promise<void> {
+    async connect(): Promise<IDatabase> {
         try {
-            let db = await this.getDb();
-            await db.connect();
+            let db = await this._db.connect();
+
+            return db;
         } catch (err) {
             throw err;
         }
