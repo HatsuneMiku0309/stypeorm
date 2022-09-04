@@ -116,7 +116,7 @@ interface IDatabaseFactory {
     getConfig(): Promise<IDbConfig>;
     getDatabase<T = any>(): Promise<T>;
     getDb(): Promise<IDatabase>;
-    connect(): Promise<IDatabase>;
+    connect(): Promise<IDatabaseFactory>;
     query(sql: string, values?: any, options?: { [params: string]: any }): Promise<{ rows: any[] }>;
     transaction(): Promise<void>;
     commit(): Promise<void>;
@@ -600,11 +600,11 @@ class DatabaseFactory implements IDatabaseFactory {
         }
     }
 
-    async connect(): Promise<IDatabase> {
+    async connect(): Promise<IDatabaseFactory> {
         try {
-            let db = await this._db.connect();
+            await this._db.connect();
 
-            return db;
+            return this;
         } catch (err) {
             throw err;
         }
