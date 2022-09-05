@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.DatabaseFactory = exports.OracleDatabase = exports.MysqlDatabase = exports.ISOLATION_LEVEL = void 0;
+exports.DatabaseFactory = exports.OracleDatabase = exports.MysqlDatabase = void 0;
 const platform_1 = require("./platform");
 var ISOLATION_LEVEL;
 (function (ISOLATION_LEVEL) {
@@ -10,7 +10,7 @@ var ISOLATION_LEVEL;
     ISOLATION_LEVEL[ISOLATION_LEVEL["REPEATABLE_READ"] = 3] = "REPEATABLE_READ";
     ISOLATION_LEVEL[ISOLATION_LEVEL["SERIALIZABLE"] = 4] = "SERIALIZABLE";
     ISOLATION_LEVEL[ISOLATION_LEVEL["SNAPSHOT"] = 5] = "SNAPSHOT";
-})(ISOLATION_LEVEL = exports.ISOLATION_LEVEL || (exports.ISOLATION_LEVEL = {}));
+})(ISOLATION_LEVEL || (ISOLATION_LEVEL = {}));
 ;
 ;
 ;
@@ -130,7 +130,7 @@ class MysqlDatabase {
 }
 exports.MysqlDatabase = MysqlDatabase;
 class MssqlDatabase {
-    _type = 'oracle';
+    _type = 'mssql';
     _database;
     _db;
     _tx;

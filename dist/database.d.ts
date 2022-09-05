@@ -21,7 +21,7 @@ interface IOracleConnectionOptions {
     password?: string;
     user?: string;
 }
-export declare enum ISOLATION_LEVEL {
+declare enum ISOLATION_LEVEL {
     NO_CHANGE = 0,
     READ_UNCOMMITTED = 1,
     READ_COMMITTED = 2,
@@ -188,4 +188,4 @@ declare class DatabaseFactory implements IDatabaseFactory {
     rollback(): Promise<void>;
     end(): Promise<number>;
 }
-export { TDatabaseType, IDbConfig, IDatabase, IDatabaseFactory, MysqlDatabase, OracleDatabase, DatabaseFactory };
+export { TDatabaseType, IMysqlConnectionOptions, IOracleConnectionOptions, IMssqlConnectionOptions, IDbConfig, IDatabase, IDatabaseFactory, MysqlDatabase, OracleDatabase, DatabaseFactory };
