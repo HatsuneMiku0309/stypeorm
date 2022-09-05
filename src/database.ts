@@ -29,7 +29,7 @@ interface IOracleConnectionOptions {
     user?: string;
 }
 
-export enum ISOLATION_LEVEL {
+enum ISOLATION_LEVEL {
     NO_CHANGE = 0x00,
     READ_UNCOMMITTED = 0x01,
     READ_COMMITTED = 0x02,
@@ -246,7 +246,7 @@ class MysqlDatabase implements IDatabase {
 }
 
 class MssqlDatabase implements IDatabase {
-    private _type: 'oracle' = 'oracle';
+    private _type: 'mssql' = 'mssql';
     private _database!: typeof mssql;
     private _db?: mssql.ConnectionPool;
     private _tx?: mssql.Transaction;
@@ -659,6 +659,9 @@ class DatabaseFactory implements IDatabaseFactory {
 
 export {
     TDatabaseType,
+    IMysqlConnectionOptions,
+    IOracleConnectionOptions,
+    IMssqlConnectionOptions,
     IDbConfig,
     IDatabase,
     IDatabaseFactory,    
