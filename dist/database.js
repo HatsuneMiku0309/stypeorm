@@ -50,6 +50,9 @@ class MysqlDatabase {
     }
     async connect() {
         try {
+            if (!!this._db) {
+                return this;
+            }
             if (this._database) {
                 this._db = await this._database.createConnection(this._config);
             }
@@ -178,6 +181,9 @@ class MssqlDatabase {
     }
     async connect() {
         try {
+            if (!!this._db) {
+                return this;
+            }
             if (this._database) {
                 let _config = {
                     ...this._config,
@@ -232,9 +238,9 @@ class MssqlDatabase {
         try {
             let db = await this.getDb();
             let request = new this._database.Request(db);
-            values.forEach((value, column) => {
-                request.input(column, value);
-            });
+            for (let column in values) {
+                request.input(column, values[column]);
+            }
             let { recordset: rows } = await request.query(sql);
             return {
                 rows
@@ -341,6 +347,9 @@ class OracleDatabase {
     }
     async connect() {
         try {
+            if (!!this._db) {
+                return this;
+            }
             if (this._database) {
                 this._db = await this._database.getConnection(this._config);
             }
