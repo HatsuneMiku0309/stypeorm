@@ -163,6 +163,10 @@ class MysqlDatabase implements IDatabase {
 
     async connect(): Promise<IDatabase> {
         try {
+            if (!!this._db) {
+                return this;
+            }
+
             if (this._database) {
                 this._db = await this._database.createConnection(this._config);
             } else {
@@ -300,6 +304,10 @@ class MssqlDatabase implements IDatabase {
 
     async connect(): Promise<IDatabase> {
         try {
+            if (!!this._db) {
+                return this;
+            }
+
             if (this._database) {
                 let _config = {
                     ...this._config,
@@ -355,9 +363,9 @@ class MssqlDatabase implements IDatabase {
         try {
             let db = await this.getDb<mssql.ConnectionPool & mssql.Transaction>();
             let request = new this._database.Request(db);
-            values.forEach((value: any, column: string) => {
-                request.input(column, value);
-            });
+            for (let column in values) {
+                request.input(column, values[column]);
+            }
             let { recordset: rows } = await request.query(sql);
 
             return {
@@ -473,6 +481,10 @@ class OracleDatabase implements IDatabase {
 
     async connect(): Promise<IDatabase> {
         try {
+            if (!!this._db) {
+                return this;
+            }
+
             if (this._database) {
                 this._db = await this._database.getConnection(this._config);
             } else {
