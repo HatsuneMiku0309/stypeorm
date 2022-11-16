@@ -135,6 +135,7 @@ exports.MysqlDatabase = MysqlDatabase;
 class MssqlDatabase {
     _type = 'mssql';
     _database;
+    _pool;
     _db;
     _tx;
     _config;
@@ -181,17 +182,8 @@ class MssqlDatabase {
     }
     async connect() {
         try {
-            if (!!this._db) {
-                return this;
-            }
-            if (this._database) {
-                let _config = {
-                    ...this._config,
-                    server: this._config.server
-                        ? this._config.server
-                        : this._config.host
-                };
-                this._db = await this._database.connect(_config);
+            if (this._pool) {
+                this._db = await this._pool.connect();
             }
             else {
                 await this._init();
@@ -212,7 +204,8 @@ class MssqlDatabase {
                     ? this._config.server
                     : this._config.host
             };
-            this._db = await database.connect(_config);
+            this._pool = new database.ConnectionPool(_config);
+            this._db = await this._pool.connect();
             return this._db;
         }
         catch (err) {
