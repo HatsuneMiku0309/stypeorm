@@ -1,4 +1,4 @@
-declare type TDatabaseType = 'oracle' | 'mysql' | 'mssql';
+type TDatabaseType = 'oracle' | 'mysql' | 'mssql';
 interface IMysqlConnectionOptions {
     user?: string;
     password?: string;

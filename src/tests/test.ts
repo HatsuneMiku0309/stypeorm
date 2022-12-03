@@ -1,3 +1,4 @@
+// import * as OracleDB from 'oracledb';
 import { IDbConfig, DatabaseFactory } from '../index';
 
 (async () => {
@@ -9,33 +10,32 @@ import { IDbConfig, DatabaseFactory } from '../index';
         //     host: '127.0.0.1',
         //     port: 3306
         // };
-        // let config: IDbConfig = {
-        //     user: 'abc',
-        //     password: 'abc',
-        //     connectString: '127.0.0.1:1526/dcdb',
-        // };
-        let config : IDbConfig = {
+        let config: IDbConfig = {
             user: 'abc',
             password: 'abc',
-            server: '127.0.0.1',
-            port: 1433,
-            database: 'HMMS',
-            options: {
-                encrypt: false
-            }
-        }
-        let msDatabase = new DatabaseFactory('mssql', config);
-        let msDatabase2 = new DatabaseFactory('mssql', config);
-        let db = await msDatabase.connect();
-        let db2 = await msDatabase2.connect();
+            connectString: '127.0.0.1:1521/dcdb'
+        };
+        // let config : IDbConfig = {
+        //     user: 'abc',
+        //     password: 'abc',
+        //     server: '127.0.0.1',
+        //     port: 1433,
+        //     database: 'HMMS',
+        //     options: {
+        //         encrypt: false
+        //     }
+        // }
+        let database = new DatabaseFactory('oracle', config);
 
-        let qaq = await db.query('SELECT TOP 1 * FROM DPM_EMPAttendance');
+        // set database after _init(), so this call is undefined. 
+        let a = await database.getDatabase();
+        console.log(a);
+        let db = await database.connect();
+
+        let qaq = await db.query('SELECT ＊ FROM SFISM4.R_LINE_OUTPUT_T rlot');
         console.log(qaq);
-        await db.end();
-        await db.query('SELECT TOP 1 * FROM DPM_EMPAttendance');
-        let result = await db2.query('SELECT TOP 1 * FROM DPM_EMPAttendance');
 
-        console.log(result.rows);
+        await db.end();
     } catch (err) {
         console.error(err);
     }

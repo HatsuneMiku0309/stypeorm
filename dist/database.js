@@ -1,7 +1,13 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.DatabaseFactory = exports.OracleDatabase = exports.MysqlDatabase = void 0;
+require('dotenv').config();
+const source_map_support_1 = require("source-map-support");
+(0, source_map_support_1.install)();
 const platform_1 = require("./platform");
+const process = require("process");
+const os = require("os");
+const { ORACLE_LIB_DIR } = process.env;
 var ISOLATION_LEVEL;
 (function (ISOLATION_LEVEL) {
     ISOLATION_LEVEL[ISOLATION_LEVEL["NO_CHANGE"] = 0] = "NO_CHANGE";
@@ -360,6 +366,9 @@ class OracleDatabase {
             let database = await platform_1.PlatformTools.load(this._type);
             database.outFormat = this._outFormat;
             this._database = database;
+            this._database.initOracleClient({
+                libDir: ORACLE_LIB_DIR
+            });
             this._database.autoCommit = true;
             this._db = await database.getConnection(this._config);
             return this._db;
@@ -435,6 +444,9 @@ class DatabaseFactory {
             this._db = new MysqlDatabase(config);
         }
         else if (type === 'oracle') {
+            if (ORACLE_LIB_DIR === undefined && os.platform() === 'darwin') {
+                throw new Error('Should setting ORACLE_LIB_DIR env.');
+            }
             this._db = new OracleDatabase(config);
         }
         else if (type === 'mssql') {

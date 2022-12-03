@@ -1,9 +1,18 @@
+require('dotenv').config();
+import { install } from 'source-map-support';
+install();
+
 import oracledb = require('oracledb');
 import * as mysql from 'mysql2/promise';
 import * as mssql from 'mssql';
 import { PlatformTools } from './platform';
+import * as process from 'process';
+import * as os from 'os';
 
 type TDatabaseType = 'oracle' | 'mysql' | 'mssql';
+const {
+    ORACLE_LIB_DIR
+} = process.env;
 
 interface IMysqlConnectionOptions {
     user?: string,
@@ -494,6 +503,9 @@ class OracleDatabase implements IDatabase {
             let database = <typeof oracledb> await PlatformTools.load(this._type);
             database.outFormat = this._outFormat;
             this._database = database;
+            this._database.initOracleClient({
+                libDir: ORACLE_LIB_DIR
+            });
             this._database.autoCommit = true;
             this._db = await database.getConnection(this._config);
 
@@ -572,6 +584,9 @@ class DatabaseFactory implements IDatabaseFactory {
         if (type === 'mysql') {
             this._db = new MysqlDatabase(config);
         } else if (type === 'oracle') {
+            if (ORACLE_LIB_DIR === undefined && os.platform() === 'darwin') {
+                throw new Error('Should setting ORACLE_LIB_DIR env.');
+            }
             this._db = new OracleDatabase(config);
         } else if (type === 'mssql') {
             this._db = new MssqlDatabase(config);
