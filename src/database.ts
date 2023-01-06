@@ -503,9 +503,11 @@ class OracleDatabase implements IDatabase {
             let database = <typeof oracledb> await PlatformTools.load(this._type);
             database.outFormat = this._outFormat;
             this._database = database;
-            this._database.initOracleClient({
-                libDir: ORACLE_LIB_DIR
-            });
+            if (os.platform() === 'darwin') {
+                this._database.initOracleClient({
+                    libDir: ORACLE_LIB_DIR
+                });
+            }
             this._database.autoCommit = true;
             this._db = await database.getConnection(this._config);
 
