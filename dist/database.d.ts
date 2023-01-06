@@ -1,3 +1,4 @@
+import * as mssql from 'mssql';
 type TDatabaseType = 'oracle' | 'mysql' | 'mssql';
 interface IMysqlConnectionOptions {
     user?: string;
@@ -21,7 +22,7 @@ interface IOracleConnectionOptions {
     password?: string;
     user?: string;
 }
-declare enum ISOLATION_LEVEL {
+export declare enum ISOLATION_LEVEL {
     NO_CHANGE = 0,
     READ_UNCOMMITTED = 1,
     READ_COMMITTED = 2,
@@ -50,39 +51,7 @@ interface IMssqlConnectionOptions {
         reapIntervalMillis?: number;
     };
     arrayRowMode?: boolean;
-    options?: {
-        beforeConnect?: void;
-        connectionString?: string;
-        trustedConnection?: boolean;
-        port?: number;
-        instanceName?: string;
-        database?: string;
-        connectTimeout?: number;
-        requestTimeout?: number;
-        cancelTimeout?: number;
-        useUTC?: boolean;
-        useColumnNames?: boolean;
-        camelCaseColumns?: boolean;
-        debug?: {
-            packet?: boolean;
-            data?: boolean;
-            payload?: boolean;
-            token?: boolean;
-        };
-        isolationLevel?: ISOLATION_LEVEL;
-        connectionIsolationLevel?: ISOLATION_LEVEL;
-        readOnlyIntent?: boolean;
-        encrypt?: boolean;
-        rowCollectionOnDone?: boolean;
-        tdsVersion?: number;
-        appName?: string;
-        connectionRetryInterval?: number;
-        datefirst?: number;
-        dateFormat?: string;
-        language?: string;
-        textsize?: number;
-        trustServerCertificate?: boolean;
-    };
+    options?: mssql.IOptions;
 }
 interface IDbConfig extends IMysqlConnectionOptions, IOracleConnectionOptions, IMssqlConnectionOptions {
 }

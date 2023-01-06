@@ -38,7 +38,7 @@ interface IOracleConnectionOptions {
     user?: string;
 }
 
-enum ISOLATION_LEVEL {
+export enum ISOLATION_LEVEL {
     NO_CHANGE = 0x00,
     READ_UNCOMMITTED = 0x01,
     READ_COMMITTED = 0x02,
@@ -47,7 +47,8 @@ enum ISOLATION_LEVEL {
     SNAPSHOT = 0x05
 };
 
-interface IMssqlConnectionOptions {
+interface IMssqlConnectionOptions 
+{
     driver?: string;
     user?: string;
     password?: string;
@@ -68,39 +69,40 @@ interface IMssqlConnectionOptions {
         reapIntervalMillis?: number;
     };
     arrayRowMode?: boolean;
-    options?: {
-        beforeConnect?: void;
-        connectionString?: string;
-        trustedConnection?: boolean;
-        port?: number;
-        instanceName?: string;
-        database?: string;
-        connectTimeout?: number;
-        requestTimeout?: number;
-        cancelTimeout?: number;
-        useUTC?: boolean;
-        useColumnNames?: boolean;
-        camelCaseColumns?: boolean;
-        debug?: {
-            packet?: boolean;
-            data?: boolean;
-            payload?: boolean;
-            token?: boolean;
-        };
-        isolationLevel?: ISOLATION_LEVEL;
-        connectionIsolationLevel?: ISOLATION_LEVEL;
-        readOnlyIntent?: boolean;
-        encrypt?: boolean;
-        rowCollectionOnDone?: boolean;
-        tdsVersion?: number;
-        appName?: string;
-        connectionRetryInterval?: number;
-        datefirst?: number;
-        dateFormat?: string;
-        language?: string;
-        textsize?: number;
-        trustServerCertificate?: boolean;
-    }
+    options?: mssql.IOptions;
+    // {
+    //     beforeConnect?: void;
+    //     connectionString?: string;
+    //     trustedConnection?: boolean;
+    //     port?: number;
+    //     instanceName?: string;
+    //     database?: string;
+    //     connectTimeout?: number;
+    //     requestTimeout?: number;
+    //     cancelTimeout?: number;
+    //     useUTC?: boolean;
+    //     useColumnNames?: boolean;
+    //     camelCaseColumns?: boolean;
+    //     debug?: {
+    //         packet?: boolean;
+    //         data?: boolean;
+    //         payload?: boolean;
+    //         token?: boolean;
+    //     };
+    //     isolationLevel?: ISOLATION_LEVEL;
+    //     connectionIsolationLevel?: ISOLATION_LEVEL;
+    //     readOnlyIntent?: boolean;
+    //     encrypt?: boolean;
+    //     rowCollectionOnDone?: boolean;
+    //     tdsVersion?: number;
+    //     appName?: string;
+    //     connectionRetryInterval?: number;
+    //     datefirst?: number;
+    //     dateFormat?: string;
+    //     language?: string;
+    //     textsize?: number;
+    //     trustServerCertificate?: boolean;
+    // }
 }
 
 interface IDbConfig extends IMysqlConnectionOptions, IOracleConnectionOptions, IMssqlConnectionOptions {
