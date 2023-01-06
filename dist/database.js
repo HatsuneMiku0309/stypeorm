@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.DatabaseFactory = exports.OracleDatabase = exports.MysqlDatabase = void 0;
+exports.DatabaseFactory = exports.OracleDatabase = exports.MysqlDatabase = exports.ISOLATION_LEVEL = void 0;
 require('dotenv').config();
 const source_map_support_1 = require("source-map-support");
 (0, source_map_support_1.install)();
@@ -16,7 +16,7 @@ var ISOLATION_LEVEL;
     ISOLATION_LEVEL[ISOLATION_LEVEL["REPEATABLE_READ"] = 3] = "REPEATABLE_READ";
     ISOLATION_LEVEL[ISOLATION_LEVEL["SERIALIZABLE"] = 4] = "SERIALIZABLE";
     ISOLATION_LEVEL[ISOLATION_LEVEL["SNAPSHOT"] = 5] = "SNAPSHOT";
-})(ISOLATION_LEVEL || (ISOLATION_LEVEL = {}));
+})(ISOLATION_LEVEL = exports.ISOLATION_LEVEL || (exports.ISOLATION_LEVEL = {}));
 ;
 ;
 ;
@@ -366,9 +366,11 @@ class OracleDatabase {
             let database = await platform_1.PlatformTools.load(this._type);
             database.outFormat = this._outFormat;
             this._database = database;
-            this._database.initOracleClient({
-                libDir: ORACLE_LIB_DIR
-            });
+            if (os.platform() === 'darwin') {
+                this._database.initOracleClient({
+                    libDir: ORACLE_LIB_DIR
+                });
+            }
             this._database.autoCommit = true;
             this._db = await database.getConnection(this._config);
             return this._db;
