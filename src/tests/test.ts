@@ -1,5 +1,5 @@
 // import * as OracleDB from 'oracledb';
-import { IDbConfig, DatabaseFactory } from '../index';
+import { DatabaseFactory, DbConfig, IDbConfig } from '../index';
 
 (async () => {
     try {
@@ -10,11 +10,20 @@ import { IDbConfig, DatabaseFactory } from '../index';
         //     host: '127.0.0.1',
         //     port: 3306
         // };
-        let config: IDbConfig = {
+        let config: IDbConfig = new DbConfig('oracle', {
             user: 'abc',
             password: 'abc',
             connectString: '127.0.0.1:1521/dcdb'
-        };
+        });
+        
+
+        
+        // let config: TDbConfig = {
+        //     user: 'abc',
+        //     password: 'abc',
+        //     connectString: '127.0.0.1:1521/dcdb'
+        // };
+        
         // let config : IDbConfig = {
         //     user: 'abc',
         //     password: 'abc',
@@ -28,11 +37,13 @@ import { IDbConfig, DatabaseFactory } from '../index';
         let database = new DatabaseFactory('oracle', config);
 
         // set database after _init(), so this call is undefined. 
-        let a = await database.getDatabase();
+        let a = await database.getDatabase<'oracle'>();
+        await database.pool();
+        let q = await database.poolConnection<'oracle'>();
         console.log(a);
         let db = await database.connect();
 
-        let qaq = await db.query('SELECT ＊ FROM SFISM4.R_LINE_OUTPUT_T rlot');
+        let qaq = await db.query('SELECT * FROM SFISM4.R_LINE_OUTPUT_T rlot');
         console.log(qaq);
 
         await db.end();
