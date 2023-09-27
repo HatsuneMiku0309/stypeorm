@@ -1,4 +1,4 @@
-import { TDatabaseType } from "./database";
+import { TDatabaseType } from './index.interface';
 
 export class PlatformTools {
     static async load (type: TDatabaseType): Promise<any> {
