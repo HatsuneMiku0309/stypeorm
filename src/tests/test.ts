@@ -3,17 +3,10 @@ import { DatabaseFactory, DbConfig, IDbConfig } from '../index';
 
 (async () => {
     try {
-        // let config: IDbConfig = {
-        //     user: 'abc',
-        //     password: 'abc',
-        //     database: 'DPM',
-        //     host: '127.0.0.1',
-        //     port: 3306
-        // };
-        let config: IDbConfig = new DbConfig('oracle', {
-            user: 'abc',
-            password: 'abc',
-            connectString: '127.0.0.1:1521/dcdb'
+        let config = new DbConfig('oracle', {
+            user: 'TMCKETL',
+            password: 'TMCKETL123',
+            connectString: '10.128.128.25:1526/dcdb'
         });
         
 
@@ -37,16 +30,16 @@ import { DatabaseFactory, DbConfig, IDbConfig } from '../index';
         let database = new DatabaseFactory('oracle', config);
 
         // set database after _init(), so this call is undefined. 
-        let a = await database.getDatabase<'oracle'>();
+        let a = await database.getDatabase();
         await database.pool();
-        let q = await database.poolConnection<'oracle'>();
-        console.log(a);
-        let db = await database.connect();
+        let q = await database.poolConnection();
+        // console.log(a);
+        // let db = await database.connect();
 
-        let qaq = await db.query('SELECT * FROM SFISM4.R_LINE_OUTPUT_T rlot');
+        let qaq = await q.execute('SELECT * FROM SFISM4.R_LINE_OUTPUT_T rlot');
         console.log(qaq);
 
-        await db.end();
+        await q.close();
     } catch (err) {
         console.error(err);
     }

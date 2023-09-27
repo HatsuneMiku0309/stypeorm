@@ -40,26 +40,35 @@ interface IDatabase {
     end(): Promise<number>;
 };
 
-interface IDatabaseFactory {
-    type: TDatabaseType;
-    getConfig(): Promise<IDbConfig>;
-    getDatabase<T extends 'mysql'>(): Promise<typeof mysql>;
-    getDatabase<T extends 'mssql'>(): Promise<typeof mssql>;
-    getDatabase<T extends 'oracle'>(): Promise<typeof oracledb>;
-    getDatabase<T extends TDatabaseType>(): Promise<typeof mysql | typeof mssql | typeof oracledb>;
+interface IDatabaseFactory<T extends TDatabaseType> {
+    getConfig(): Promise<IDbConfig<T>>;
+    getDatabase(): Promise<TDatabase<T>>;
     getDb(): Promise<IDatabase>;
-    pool(): Promise<IDatabaseFactory>;
-    poolConnection<T extends 'mysql'>(): Promise<mysql.PoolConnection>;
-    poolConnection<T extends 'mssql'>(): Promise<mssql.ConnectionPool>;
-    poolConnection<T extends 'oracle'>(): Promise<oracledb.Connection>;
-    poolConnection<T extends TDatabaseType>(): Promise<mysql.PoolConnection | mssql.ConnectionPool | oracledb.Connection>;
-    connect(): Promise<IDatabaseFactory>;
+    pool(): Promise<IDatabaseFactory<T>>;
+    poolConnection(): Promise<TPoolConnection<T>>;
+    connect(): Promise<IDatabaseFactory<T>>;
     query<T = any>(sql: string, values?: any, options?: { [params: string]: any }): Promise<{ rows: T[] }>;
     transaction(): Promise<void>;
     commit(): Promise<void>;
     rollback(): Promise<void>;
     end(): Promise<number>;
 };
+
+type TDatabase<T> = T extends 'mysql'
+    ? typeof mysql
+    : T extends 'mssql'
+    ? typeof mssql
+    : T extends 'oracle'
+    ? typeof oracledb
+    : never;
+
+type TPoolConnection<T> = T extends 'mysql'
+    ? mysql.PoolConnection
+    : T extends 'mssql'
+    ? mssql.ConnectionPool
+    : T extends 'oracle'
+    ? oracledb.Connection
+    : never;
 
 class MysqlDatabase implements IDatabase {
     private _type: 'mysql' = 'mysql';
@@ -639,11 +648,11 @@ class OracleDatabase implements IDatabase {
     }
 }
 
-class DatabaseFactory <T extends TDatabaseType> implements IDatabaseFactory {
+class DatabaseFactory <T extends TDatabaseType, K extends T> implements IDatabaseFactory<T> {
     private _type: T;
     private _db: IDatabase;
-    private _config: IDbConfig;
-    constructor(type: T, config: IDbConfig) {
+    private _config: IDbConfig<T>;
+    constructor(type: T, config: IDbConfig<K>) {
         this._config = config;
         this._type = type;
         if (type === 'mysql') {
@@ -664,16 +673,12 @@ class DatabaseFactory <T extends TDatabaseType> implements IDatabaseFactory {
         return this._db.type;
     }
 
-    async getConfig(): Promise<IDbConfig> {
+    async getConfig(): Promise<IDbConfig<T>> {
         return this._config;
     }
-
-    async getDatabase<T extends 'mysql'>(): Promise<typeof mysql>;
-    async getDatabase<T extends 'mssql'>(): Promise<typeof mssql>;
-    async getDatabase<T extends 'oracle'>(): Promise<typeof oracledb>;
-    async getDatabase<T extends TDatabaseType>(): Promise<typeof mysql | typeof mssql | typeof oracledb> {
+    async getDatabase(): Promise<TDatabase<T>> {
         try {
-            return await this._db.getDatabase();
+            return <TDatabase<T>> await this._db.getDatabase();
         } catch (err) {
             throw err;
         }
@@ -687,7 +692,7 @@ class DatabaseFactory <T extends TDatabaseType> implements IDatabaseFactory {
         }
     }
 
-    async pool(): Promise<IDatabaseFactory> {
+    async pool(): Promise<IDatabaseFactory<T>> {
         try {
             await this._db.pool();
 
@@ -697,11 +702,7 @@ class DatabaseFactory <T extends TDatabaseType> implements IDatabaseFactory {
         }
     }
 
-    async poolConnection<T extends 'mysql'>(): Promise<mysql.PoolConnection>;
-    async poolConnection<T extends 'mssql'>(): Promise<mssql.ConnectionPool>;
-    async poolConnection<T extends 'oracle'>(): Promise<oracledb.Connection>;
-    async poolConnection<T extends TDatabaseType>(
-    ): Promise<mysql.PoolConnection | mssql.ConnectionPool | oracledb.Connection> {
+    async poolConnection(): Promise<TPoolConnection<T>> {
         try {
             let db: mysql.PoolConnection | mssql.ConnectionPool | oracledb.Connection;
             switch (this._type) {
@@ -718,13 +719,13 @@ class DatabaseFactory <T extends TDatabaseType> implements IDatabaseFactory {
                     throw new Error('Unkowns type');
             }
 
-            return db;
+            return <TPoolConnection<T>> db;
         } catch (err) {
             throw err;
         }
     }
 
-    async connect(): Promise<IDatabaseFactory> {
+    async connect(): Promise<IDatabaseFactory<T>> {
         try {
             await this._db.connect();
 

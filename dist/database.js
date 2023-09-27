@@ -1,12 +1,14 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.DatabaseFactory = exports.OracleDatabase = exports.MysqlDatabase = exports.ISOLATION_LEVEL = void 0;
+exports.DbConfig = exports.DatabaseFactory = exports.OracleDatabase = exports.MysqlDatabase = exports.ISOLATION_LEVEL = void 0;
 require('dotenv').config();
 const source_map_support_1 = require("source-map-support");
 (0, source_map_support_1.install)();
 const platform_1 = require("./platform");
 const process = require("process");
 const os = require("os");
+const config_1 = require("./config");
+Object.defineProperty(exports, "DbConfig", { enumerable: true, get: function () { return config_1.DbConfig; } });
 const { ORACLE_LIB_DIR } = process.env;
 var ISOLATION_LEVEL;
 (function (ISOLATION_LEVEL) {
@@ -20,10 +22,10 @@ var ISOLATION_LEVEL;
 ;
 ;
 ;
-;
 class MysqlDatabase {
     _type = 'mysql';
     _database;
+    _pool;
     _db;
     _config;
     constructor(config) {
@@ -54,17 +56,43 @@ class MysqlDatabase {
             throw err;
         }
     }
+    async pool() {
+        try {
+            if (!!this._pool) {
+                return this;
+            }
+            if (this._database) {
+                this._pool = this._database.createPool(this._config);
+            }
+            else {
+                let database = await this._init();
+                this._pool = database.createPool(this._config);
+            }
+            return this;
+        }
+        catch (err) {
+            throw err;
+        }
+    }
+    async poolConnection() {
+        try {
+            if (!this._pool) {
+                throw new Error('Need Create Pool');
+            }
+            let db = await this._pool?.getConnection();
+            return db;
+        }
+        catch (err) {
+            throw err;
+        }
+    }
     async connect() {
         try {
             if (!!this._db) {
                 return this;
             }
-            if (this._database) {
-                this._db = await this._database.createConnection(this._config);
-            }
-            else {
-                await this._init();
-            }
+            let database = await this._init();
+            this._db = await database.createConnection(this._config);
             return this;
         }
         catch (err) {
@@ -73,15 +101,29 @@ class MysqlDatabase {
     }
     async _init() {
         try {
+            if (this._database) {
+                return this._database;
+            }
             let database = await platform_1.PlatformTools.load(this._type);
             this._database = database;
-            this._db = await database.createConnection(this._config);
-            return this._db;
+            return this._database;
         }
         catch (err) {
             throw err;
         }
     }
+    /**
+     *
+     * @param sql
+     * @param values
+     * @param options
+     * @returns
+     *
+     * @exmple
+     * Prepared Statement:
+     *
+     *      sql: `SELECT * FROM test WHERE ID = ?`; values: `[123]`
+     */
     async query(sql, values = [], options = {}) {
         try {
             let db = await this.getDb();
@@ -186,14 +228,44 @@ class MssqlDatabase {
             throw err;
         }
     }
+    async pool() {
+        try {
+            if (!this._pool) {
+                let database = await this._init();
+                this._pool = new database.ConnectionPool(this._config);
+            }
+            return this;
+        }
+        catch (err) {
+            throw err;
+        }
+    }
+    async poolConnection() {
+        try {
+            if (!this._pool) {
+                throw new Error('Need Create Pool');
+            }
+            let db = await this._pool.connect();
+            return db;
+        }
+        catch (err) {
+            throw err;
+        }
+    }
     async connect() {
         try {
-            if (this._pool) {
-                this._db = await this._pool.connect();
+            if (!!this._db) {
+                return this;
             }
-            else {
-                await this._init();
-            }
+            let database = await this._init();
+            let pool = new database.ConnectionPool({
+                ...this._config,
+                pool: {
+                    min: 0,
+                    max: 1
+                }
+            });
+            this._db = await pool.connect();
             return this;
         }
         catch (err) {
@@ -202,17 +274,12 @@ class MssqlDatabase {
     }
     async _init() {
         try {
+            if (this._database) {
+                return this._database;
+            }
             let database = await platform_1.PlatformTools.load(this._type);
             this._database = database;
-            let _config = {
-                ...this._config,
-                server: this._config.server
-                    ? this._config.server
-                    : this._config.host
-            };
-            this._pool = new database.ConnectionPool(_config);
-            this._db = await this._pool.connect();
-            return this._db;
+            return this._database;
         }
         catch (err) {
             throw err;
@@ -307,6 +374,7 @@ class OracleDatabase {
     _type = 'oracle';
     _database;
     _db;
+    _pool;
     _config;
     _outFormat;
     /**
@@ -344,17 +412,38 @@ class OracleDatabase {
             throw err;
         }
     }
+    async pool() {
+        try {
+            if (this._pool) {
+                return this;
+            }
+            let database = await this._init();
+            this._pool = await database.createPool(this._config);
+            return this;
+        }
+        catch (err) {
+            throw err;
+        }
+    }
+    async poolConnection() {
+        try {
+            if (!this._pool) {
+                throw new Error('Need Create Pool');
+            }
+            let db = await this._pool.getConnection();
+            return db;
+        }
+        catch (err) {
+            throw err;
+        }
+    }
     async connect() {
         try {
             if (!!this._db) {
                 return this;
             }
-            if (this._database) {
-                this._db = await this._database.getConnection(this._config);
-            }
-            else {
-                await this._init();
-            }
+            let database = await this._init();
+            this._db = await database.getConnection(this._config);
             return this;
         }
         catch (err) {
@@ -363,22 +452,41 @@ class OracleDatabase {
     }
     async _init() {
         try {
+            if (this._database) {
+                return this._database;
+            }
             let database = await platform_1.PlatformTools.load(this._type);
             database.outFormat = this._outFormat;
             this._database = database;
             if (os.platform() === 'darwin') {
-                this._database.initOracleClient({
-                    libDir: ORACLE_LIB_DIR
-                });
+                try {
+                    this._database.initOracleClient({
+                        libDir: ORACLE_LIB_DIR
+                    });
+                }
+                catch (err) {
+                    console.warn(err);
+                }
             }
             this._database.autoCommit = true;
-            this._db = await database.getConnection(this._config);
-            return this._db;
+            return this._database;
         }
         catch (err) {
             throw err;
         }
     }
+    /**
+     *
+     * @param sql
+     * @param values
+     * @param options
+     * @returns
+     *
+     * @exmple
+     * Prepared Statement:
+     *
+     *      sql: `SELECT * FROM test WHERE ID = :0`; values: `[123]`
+     */
     async query(sql, values = [], options = {}) {
         try {
             let db = await this.getDb();
@@ -438,21 +546,23 @@ class OracleDatabase {
 }
 exports.OracleDatabase = OracleDatabase;
 class DatabaseFactory {
+    _type;
     _db;
     _config;
     constructor(type, config) {
         this._config = config;
+        this._type = type;
         if (type === 'mysql') {
-            this._db = new MysqlDatabase(config);
+            this._db = new MysqlDatabase(config.getConfig());
         }
         else if (type === 'oracle') {
             if (ORACLE_LIB_DIR === undefined && os.platform() === 'darwin') {
                 throw new Error('Should setting ORACLE_LIB_DIR env.');
             }
-            this._db = new OracleDatabase(config);
+            this._db = new OracleDatabase(config.getConfig());
         }
         else if (type === 'mssql') {
-            this._db = new MssqlDatabase(config);
+            this._db = new MssqlDatabase(config.getConfig());
         }
         else {
             throw new Error('Unkowns type');
@@ -462,7 +572,7 @@ class DatabaseFactory {
         return this._db.type;
     }
     async getConfig() {
-        return await this._config;
+        return this._config;
     }
     async getDatabase() {
         try {
@@ -475,6 +585,37 @@ class DatabaseFactory {
     async getDb() {
         try {
             return this._db;
+        }
+        catch (err) {
+            throw err;
+        }
+    }
+    async pool() {
+        try {
+            await this._db.pool();
+            return this;
+        }
+        catch (err) {
+            throw err;
+        }
+    }
+    async poolConnection() {
+        try {
+            let db;
+            switch (this._type) {
+                case 'mysql':
+                    db = await this._db.poolConnection();
+                    break;
+                case 'mssql':
+                    db = await this._db.poolConnection();
+                    break;
+                case 'oracle':
+                    db = await this._db.poolConnection();
+                    break;
+                default:
+                    throw new Error('Unkowns type');
+            }
+            return db;
         }
         catch (err) {
             throw err;
