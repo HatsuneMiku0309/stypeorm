@@ -5,6 +5,10 @@ import oracledb = require('oracledb');
 import * as mysql from 'mysql2/promise';
 import * as mssql from 'mssql';
 
+export interface IBaseObj<T = any> {
+    [col: string]: T
+}
+
 export type TDatabaseType = 'oracle' | 'mysql' | 'mssql';
 export type TMysqlConfig = mysqlPoolOptions | mysqlConnectionOptions;
 export type TMssqlConfig = mssqlConfig;
